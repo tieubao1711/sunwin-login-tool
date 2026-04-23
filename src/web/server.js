@@ -13,7 +13,7 @@ function startWebServer(port = 1711) {
   const server = http.createServer(app);
 
   app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://103.82.135.143:5173'],
     credentials: true
   }));
 
@@ -21,7 +21,7 @@ function startWebServer(port = 1711) {
 
   io = new Server(server, {
     cors: {
-      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://103.82.135.143:5173'],
       credentials: true
     }
   });
