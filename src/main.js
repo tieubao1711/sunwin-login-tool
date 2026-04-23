@@ -1,0 +1,32 @@
+const path = require('path');
+const { connectMongo } = require('./db/mongoose');
+const { ensureDir } = require('./utils/file');
+const { startWebServer } = require('./web/server');
+
+async function openBrowser(url) {
+  const { default: open } = await import('open');
+  await open(url);
+}
+
+async function main() {
+  const { io } = startWebServer(3001);
+  global.io = io;
+
+  ensureDir(path.resolve(process.cwd(), 'output'));
+
+  console.log('[1/2] Connecting MongoDB...');
+  await connectMongo();
+
+  console.log('[2/2] Opening dashboard...');
+  await openBrowser('http://localhost:5173');
+}
+
+main()
+  .then(() => {
+    process.exitCode = 0;
+  })
+  .catch((error) => {
+    console.error('[Fatal Error]', error.message);
+    console.error(error.stack || '');
+    process.exitCode = 1;
+  });

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-900 text-white flex">
+
+<!-- SIDEBAR -->
+<div class="w-60 bg-gray-800 h-screen p-4">
+  <h2 class="text-xl font-bold mb-6">⚡ Admin</h2>
+
+  <div class="space-y-2">
+    <button onclick="showTab('dashboard')" class="w-full text-left p-2 hover:bg-gray-700 rounded">📊 Dashboard</button>
+    <button onclick="showTab('logs')" class="w-full text-left p-2 hover:bg-gray-700 rounded">📋 Logs</button>
+    <button onclick="showTab('runs')" class="w-full text-left p-2 hover:bg-gray-700 rounded">🗂 Runs</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="flex-1 p-6 overflow-auto">
+
+<!-- DASHBOARD -->
+<div id="dashboardTab">
+  <h1 class="text-2xl mb-4">📊 Dashboard</h1>
+
+  <!-- stats -->
+  <div class="grid grid-cols-4 gap-4 mb-4">
+    <div class="bg-gray-800 p-4 rounded">Total: <span id="total">0</span></div>
+    <div class="bg-green-700 p-4 rounded">Success: <span id="success">0</span></div>
+    <div class="bg-red-700 p-4 rounded">Failed: <span id="failed">0</span></div>
+    <div class="bg-yellow-600 p-4 rounded">High: <span id="high">0</span></div>
+  </div>
+
+  <!-- progress -->
+  <div class="w-full bg-gray-700 h-4 rounded mb-4">
+    <div id="progressBar" class="bg-blue-500 h-4 rounded" style="width:0%"></div>
+  </div>
+
+  <!-- chart -->
+  <canvas id="chart" height="100"></canvas>
+</div>
+
+<!-- LOGS -->
+<div id="logsTab" class="hidden">
+  <h1 class="text-2xl mb-4">📋 Logs</h1>
+
+  <div class="overflow-auto h-[600px]">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-gray-700">
+          <th>#</th>
+          <th>Username</th>
+          <th>Status</th>
+          <th>Balance</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- RUNS -->
+<div id="runsTab" class="hidden">
+  <h1 class="text-2xl mb-4">🗂 Run History</h1>
+
+  <ul id="runsList" class="space-y-2"></ul>
+</div>
+
+</div>
+
+<script>
+const socket = io();
+
+let total=0, success=0, failed=0, high=0, count=0;
+
+const table = document.getElementById('tableBody');
+
+const chart = new Chart(document.getElementById('chart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Success', 'Failed'],
+    datasets: [{
+      data: [0,0],
+      backgroundColor: ['#22c55e', '#ef4444']
+    }]
+  }
+});
+
+function updateUI(){
+  document.getElementById('total').innerText = total;
+  document.getElementById('success').innerText = success;
+  document.getElementById('failed').innerText = failed;
+  document.getElementById('high').innerText = high;
+
+  chart.data.datasets[0].data = [success, failed];
+  chart.update();
+
+  const percent = total ? (count/total)*100 : 0;
+  document.getElementById('progressBar').style.width = percent + '%';
+}
+
+socket.on('log', data => {
+  count++;
+
+  if(data.status==='SUCCESS') success++;
+  else failed++;
+
+  if(data.balance > 100000) high++;
+
+  const row = document.createElement('tr');
+
+  row.className =
+    data.balance > 100000
+      ? 'bg-yellow-500 text-black'
+      : data.status==='SUCCESS'
+      ? 'bg-green-700'
+      : 'bg-red-700';
+
+  row.innerHTML = `
+    <td>${count}</td>
+    <td>${data.username}</td>
+    <td>${data.status}</td>
+    <td>${data.balance}</td>
+    <td>${data.message||''}</td>
+  `;
+
+  table.prepend(row);
+
+  updateUI();
+});
+
+socket.on('stats', data => {
+  total = data.total;
+  success = data.success;
+  failed = data.failed;
+  updateUI();
+});
+
+function showTab(tab){
+  document.getElementById('dashboardTab').classList.add('hidden');
+  document.getElementById('logsTab').classList.add('hidden');
+  document.getElementById('runsTab').classList.add('hidden');
+
+  document.getElementById(tab+'Tab').classList.remove('hidden');
+}
+
+// load run history
+async function loadRuns(){
+  const runs = await fetch('/api/latest-run').then(r=>r.json());
+  const list = document.getElementById('runsList');
+
+  if(!runs) return;
+
+  const li = document.createElement('li');
+  li.className = 'bg-gray-800 p-3 rounded';
+
+  li.innerHTML = `
+    <b>${runs.name}</b><br>
+    Total: ${runs.totalAccounts}<br>
+    Success: ${runs.successCount}<br>
+    Failed: ${runs.failedCount}
+  `;
+
+  list.appendChild(li);
+}
+
+loadRuns();
+</script>
+
+</body>
+</html>
