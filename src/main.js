@@ -9,7 +9,7 @@ async function openBrowser(url) {
 }
 
 async function main() {
-  const { io } = startWebServer(3001);
+  const { io } = startWebServer(1711);
   global.io = io;
 
   ensureDir(path.resolve(process.cwd(), 'output'));

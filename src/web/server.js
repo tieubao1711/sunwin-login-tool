@@ -8,7 +8,7 @@ const controlApi = require('./controlApi');
 
 let io;
 
-function startWebServer(port = 3001) {
+function startWebServer(port = 1711) {
   const app = express();
   const server = http.createServer(app);
 
