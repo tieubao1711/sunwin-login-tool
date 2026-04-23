@@ -8,7 +8,7 @@ import {
 } from '../lib/api';
 
 export default function RunControlPanel({ onLoaded }) {
-  const [accountApiUrl, setAccountApiUrl] = useState('http://103.82.135.143:3001');
+  const [accountApiUrl, setAccountApiUrl] = useState('http://103.82.135.143:1711');
   const [concurrency, setConcurrency] = useState(3);
   const [delayBetweenRequestsMs, setDelayBetweenRequestsMs] = useState(1000);
   const [highBalanceThreshold, setHighBalanceThreshold] = useState(100000);
@@ -22,7 +22,7 @@ export default function RunControlPanel({ onLoaded }) {
     try {
       const parsed = JSON.parse(saved);
 
-      setAccountApiUrl(parsed.accountApiUrl || 'http://103.82.135.143:3001');
+      setAccountApiUrl(parsed.accountApiUrl || 'http://103.82.135.143:1711');
       setConcurrency(Number(parsed.concurrency || 3));
       setDelayBetweenRequestsMs(Number(parsed.delayBetweenRequestsMs || 1000));
       setHighBalanceThreshold(Number(parsed.highBalanceThreshold || 100000));
@@ -108,7 +108,7 @@ export default function RunControlPanel({ onLoaded }) {
           <input
             value={accountApiUrl}
             onChange={(e) => setAccountApiUrl(e.target.value)}
-            placeholder="http://103.82.135.143:3001"
+            placeholder="http://103.82.135.143:1711"
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-500"
           />
           <div className="mt-1 text-[11px] text-slate-500">

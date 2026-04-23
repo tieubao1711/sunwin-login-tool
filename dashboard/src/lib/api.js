@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:1711/api';
 
 export async function apiGet(path) {
   const res = await fetch(`${API_BASE}${path}`);
@@ -49,7 +49,7 @@ export async function getRunStats(runId) {
 }
 
 export async function loadAccountsFromApi(body) {
-  const res = await fetch('http://localhost:3001/api/control/run/load', {
+  const res = await fetch('http://localhost:1711/api/control/run/load', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -59,7 +59,7 @@ export async function loadAccountsFromApi(body) {
 }
 
 export async function startRun(body) {
-  const res = await fetch('http://localhost:3001/api/control/run/start', {
+  const res = await fetch('http://localhost:1711/api/control/run/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
@@ -69,21 +69,21 @@ export async function startRun(body) {
 }
 
 export async function pauseRun() {
-  const res = await fetch('http://localhost:3001/api/control/run/pause', {
+  const res = await fetch('http://localhost:1711/api/control/run/pause', {
     method: 'POST'
   });
   return res.json();
 }
 
 export async function resumeRun() {
-  const res = await fetch('http://localhost:3001/api/control/run/resume', {
+  const res = await fetch('http://localhost:1711/api/control/run/resume', {
     method: 'POST'
   });
   return res.json();
 }
 
 export async function stopRun() {
-  const res = await fetch('http://localhost:3001/api/control/run/stop', {
+  const res = await fetch('http://localhost:1711/api/control/run/stop', {
     method: 'POST'
   });
   return res.json();
