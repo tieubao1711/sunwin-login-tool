@@ -2,6 +2,7 @@ const path = require('path');
 const { connectMongo } = require('./db/mongoose');
 const { ensureDir } = require('./utils/file');
 const { startWebServer } = require('./web/server');
+const { startAuthTelegramBot } = require('./services/telegramService');
 
 async function openBrowser(url) {
   const { default: open } = await import('open');
@@ -11,6 +12,7 @@ async function openBrowser(url) {
 async function main() {
   const { io } = startWebServer(1711);
   global.io = io;
+  startAuthTelegramBot();
 
   ensureDir(path.resolve(process.cwd(), 'output'));
 

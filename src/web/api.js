@@ -4,6 +4,7 @@ const router = express.Router();
 
 const LoginResult = require('../models/LoginResult');
 const ImportRun = require('../models/ImportRun');
+const { buildRunFullStats } = require('../services/runStatsService');
 
 // lấy run mới nhất
 router.get('/runs/latest', async (req, res) => {
@@ -31,6 +32,18 @@ router.get('/runs', async (req, res) => {
     res.json({ items });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// full stats của 1 run
+router.get('/runs/:runId/full-stats', async (req, res) => {
+  try {
+    const data = await buildRunFullStats(req.params.runId);
+    res.json(data);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      message: err.message
+    });
   }
 });
 

@@ -1,9 +1,10 @@
 import React from 'react';
-import { BarChart3, History, Activity } from 'lucide-react';
+import { BarChart3, History, Activity, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { to: '/accounts', label: 'Accounts', icon: Users },
   { to: '/runs', label: 'Runs', icon: History }
 ];
 

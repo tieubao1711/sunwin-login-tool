@@ -43,5 +43,11 @@ module.exports = {
     notifySuccess: String(process.env.TELEGRAM_NOTIFY_SUCCESS || 'true') === 'true',
     notifyFailure: String(process.env.TELEGRAM_NOTIFY_FAILURE || 'true') === 'true',
     dataQueueDelayMs: Number(process.env.TELEGRAM_DATA_QUEUE_DELAY_MS || 1200)
+  },
+  auth: {
+    secret: process.env.AUTH_SECRET || 'local-auth-secret',
+    sessionTtlMs: Number(process.env.AUTH_SESSION_TTL_MS || 300000),
+    telegramChatId: process.env.AUTH_TELEGRAM_CHAT_ID || '',
+    telegramTopicId: process.env.AUTH_TELEGRAM_TOPIC_ID || ''
   }
 };

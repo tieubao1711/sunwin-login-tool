@@ -1,9 +1,17 @@
+const path = require('path');
 const config = require('../config');
 const { nowIsoCompact } = require('../utils/time');
-const { createImportRun, finishImportRun } = require('../repositories/importRunRepository');
 const { ensureDir, writeJson } = require('../utils/file');
-const path = require('path');
+const { createImportRun, finishImportRun } = require('../repositories/importRunRepository');
 const { processSingleAccount } = require('./workerService');
+const { resetWarp } = require('./../utils/warpManager');
+const {
+  notifyRunSummaryFile,
+  flushAllBatches,
+  waitForDataQueueDrain
+} = require('./telegramService');
+
+const OUTPUT_DIR = path.resolve(process.cwd(), 'output');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -18,11 +26,13 @@ class RunManager {
     this.total = 0;
     this.summary = null;
     this.run = null;
-    this.workers = [];
+    this.startedAt = null;
+
     this.runtimeConfig = {
       concurrency: 3,
       delayBetweenRequestsMs: 0,
-      highBalanceThreshold: 100000
+      highBalanceThreshold: 100000,
+      resetWarpEvery: 5
     };
   }
 
@@ -52,23 +62,25 @@ class RunManager {
     this.source = source || '';
     this.cursor = 0;
     this.total = this.accounts.length;
+    this.startedAt = new Date();
 
     this.runtimeConfig = {
       concurrency: Number(options.concurrency || config.concurrency || 3),
       delayBetweenRequestsMs: Number(
-        options.delayBetweenRequestsMs || config.delayBetweenRequestsMs || 0
+        options.delayBetweenRequestsMs ?? config.delayBetweenRequestsMs ?? 0
       ),
       highBalanceThreshold: Number(
-        options.highBalanceThreshold || config.highBalanceThreshold || 100000
+        options.highBalanceThreshold ?? config.highBalanceThreshold ?? 100000
+      ),
+      resetWarpEvery: Number(
+        options.resetWarpEvery ?? config.resetWarpEvery ?? 5
       )
     };
-
-    const startedAt = new Date();
 
     this.run = await createImportRun({
       name: config.runName || `run-${nowIsoCompact()}`,
       sourceFile: source,
-      startedAt,
+      startedAt: this.startedAt,
       totalAccounts: this.total,
       threshold: this.runtimeConfig.highBalanceThreshold,
       notes: 'Dashboard controlled bulk login run'
@@ -84,7 +96,7 @@ class RunManager {
       highBalanceCount: 0,
       threshold: this.runtimeConfig.highBalanceThreshold,
       durationMs: 0,
-      startedAt: startedAt.toISOString(),
+      startedAt: this.startedAt.toISOString(),
       finishedAt: null
     };
 
@@ -94,21 +106,112 @@ class RunManager {
         runId: String(this.run._id),
         runName: this.run.name,
         totalAccounts: this.total,
-        startedAt: startedAt.toISOString()
+        startedAt: this.startedAt.toISOString()
       });
     }
 
-    this.workers = Array.from(
-      { length: Math.max(1, this.runtimeConfig.concurrency) },
-      (_, idx) => this.runWorker(idx)
+    try {
+      await this.runByWarpBatches();
+      await this.finishRun();
+    } catch (err) {
+      console.error('[RunManager] Run error:', err.message);
+      await this.finishRun();
+    }
+  }
+
+  async waitIfPaused() {
+    while (this.state === 'paused') {
+      await sleep(300);
+    }
+  }
+
+  async runByWarpBatches() {
+    const resetEvery = Number(this.runtimeConfig.resetWarpEvery || 0);
+
+    if (resetEvery <= 0) {
+      await this.runBatch(this.accounts, 0);
+      return;
+    }
+
+    for (let i = 0; i < this.accounts.length; i += resetEvery) {
+      if (this.state === 'stopping') return;
+
+      await this.waitIfPaused();
+
+      const batch = this.accounts.slice(i, i + resetEvery);
+
+      console.log(
+        `\n🌐 Reset WARP trước batch ${i + 1}-${i + batch.length}/${this.accounts.length}`
+      );
+
+      await resetWarp();
+
+      await this.runBatch(batch, i);
+    }
+  }
+
+  async runBatch(batch, baseIndex) {
+    let localCursor = 0;
+    const workersCount = Math.max(1, Number(this.runtimeConfig.concurrency || 1));
+
+    const worker = async () => {
+      while (true) {
+        if (this.state === 'stopping') return;
+
+        await this.waitIfPaused();
+
+        const localIndex = localCursor++;
+        if (localIndex >= batch.length) return;
+
+        const globalIndex = baseIndex + localIndex;
+        const account = batch[localIndex];
+
+        const result = await processSingleAccount(
+          account,
+          this.run._id,
+          globalIndex,
+          this.total,
+          {
+            delayBetweenRequestsMs: this.runtimeConfig.delayBetweenRequestsMs,
+            highBalanceThreshold: this.runtimeConfig.highBalanceThreshold
+          }
+        );
+
+        this.cursor = Math.max(this.cursor, globalIndex + 1);
+
+        if (result.status === 'SUCCESS') this.summary.successCount += 1;
+        if (result.status === 'FAILED') this.summary.failedCount += 1;
+        if (result.highBalance) this.summary.highBalanceCount += 1;
+
+        const io = this.getIO();
+        if (io) {
+          io.emit('run:stats', {
+            runId: String(this.run._id),
+            summary: this.summary,
+            processed: this.summary.successCount + this.summary.failedCount
+          });
+        }
+      }
+    };
+
+    const workers = Array.from(
+      { length: Math.min(workersCount, batch.length) },
+      () => worker()
     );
 
-    await Promise.all(this.workers);
+    await Promise.all(workers);
+  }
+
+  async finishRun() {
+    if (!this.run || !this.summary) {
+      this.state = 'idle';
+      return;
+    }
 
     const finishedAt = new Date();
+
     this.summary.finishedAt = finishedAt.toISOString();
-    this.summary.durationMs =
-      finishedAt.getTime() - new Date(this.summary.startedAt).getTime();
+    this.summary.durationMs = finishedAt.getTime() - new Date(this.summary.startedAt).getTime();
 
     await finishImportRun(this.run._id, {
       finishedAt,
@@ -119,12 +222,14 @@ class RunManager {
       summary: this.summary
     });
 
-    ensureDir(path.resolve(process.cwd(), 'output'));
+    ensureDir(OUTPUT_DIR);
+
     writeJson(
       path.resolve(process.cwd(), 'output', `run-summary-${nowIsoCompact()}.json`),
       { summary: this.summary }
     );
 
+    const io = this.getIO();
     if (io) {
       io.emit('run:summary', {
         runId: String(this.run._id),
@@ -132,50 +237,27 @@ class RunManager {
       });
     }
 
+    try {
+      console.log('[Run] Flushing Telegram...');
+      await flushAllBatches();
+
+      console.log('[Run] Waiting Telegram queue...');
+      await waitForDataQueueDrain();
+
+      console.log('[Run] Sending summary...');
+      await notifyRunSummaryFile(String(this.run._id));
+    } catch (err) {
+      console.log(`[TELEGRAM ERROR] RUN_SUMMARY | ${err.message}`);
+    }
+
+    console.log(
+      `[Run] Finished ${this.run.name} | success=${this.summary.successCount} | failed=${this.summary.failedCount}`
+    );
+
     this.state = 'idle';
     this.accounts = [];
-    this.workers = [];
-  }
-
-  async runWorker(workerIndex) {
-    while (true) {
-      if (this.state === 'stopping') {
-        return;
-      }
-
-      if (this.state === 'paused') {
-        await sleep(300);
-        continue;
-      }
-
-      const index = this.cursor++;
-      if (index >= this.total) return;
-
-      const account = this.accounts[index];
-      const result = await processSingleAccount(
-        account,
-        this.run._id,
-        index,
-        this.total,
-        {
-          delayBetweenRequestsMs: this.runtimeConfig.delayBetweenRequestsMs,
-          highBalanceThreshold: this.runtimeConfig.highBalanceThreshold
-        }
-      );
-
-      if (result.status === 'SUCCESS') this.summary.successCount += 1;
-      if (result.status === 'FAILED') this.summary.failedCount += 1;
-      if (result.highBalance) this.summary.highBalanceCount += 1;
-
-      const io = this.getIO();
-      if (io) {
-        io.emit('run:stats', {
-          runId: String(this.run._id),
-          summary: this.summary,
-          processed: this.summary.successCount + this.summary.failedCount
-        });
-      }
-    }
+    this.cursor = 0;
+    this.total = 0;
   }
 
   pause() {

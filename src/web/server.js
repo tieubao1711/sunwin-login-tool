@@ -5,6 +5,7 @@ const path = require('path');
 const cors = require('cors');
 const apiRoutes = require('./api');
 const controlApi = require('./controlApi');
+const authApi = require('./authApi');
 
 let io;
 
@@ -25,7 +26,8 @@ function startWebServer(port = 1711) {
       credentials: true
     }
   });
-
+  
+  app.use('/api/auth', authApi);
   app.use('/api', apiRoutes);
   app.use('/api/control', controlApi);
   

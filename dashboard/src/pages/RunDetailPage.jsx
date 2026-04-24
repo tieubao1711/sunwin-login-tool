@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 
 import Sidebar from '../components/Sidebar';
@@ -27,7 +27,7 @@ export default function RunDetailPage() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  async function loadResults(extraParams = {}) {
+  const loadResults = useCallback(async () => {
     try {
       const resultData = await getRunResults(runId, {
         limit: 500,
@@ -35,15 +35,36 @@ export default function RunDetailPage() {
         status: statusFilter,
         hasTransaction,
         hasDeposit,
-        hasWithdraw,
-        ...extraParams
+        hasWithdraw
       });
 
       setResults(resultData.items || []);
     } catch (err) {
       console.error('Run detail results load error:', err.message);
     }
-  }
+  }, [runId, search, statusFilter, hasTransaction, hasDeposit, hasWithdraw]);
+
+  const itemMatchesFilters = useCallback(
+    (item) => {
+      if (statusFilter && item.status !== statusFilter) return false;
+
+      const q = search.trim().toLowerCase();
+      if (q) {
+        const matched = [item.username, item.fullname, item.message, item.phone]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q));
+
+        if (!matched) return false;
+      }
+
+      if (hasTransaction && Number(item.transactionCount || 0) <= 0) return false;
+      if (hasDeposit && Number(item.slipCount || 0) <= 0) return false;
+      if (hasWithdraw && Number(item.slipCount || 0) <= 0) return false;
+
+      return true;
+    },
+    [search, statusFilter, hasTransaction, hasDeposit, hasWithdraw]
+  );
 
   useEffect(() => {
     async function load() {
@@ -55,47 +76,72 @@ export default function RunDetailPage() {
 
         setRun(runData);
         setStats(statsData);
-        await loadResults({});
+        await loadResults();
       } catch (err) {
         console.error('Run detail load error:', err.message);
       }
     }
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId]);
+  }, [runId, loadResults]);
 
+  // reload API khi đổi filter/search
   useEffect(() => {
     const timer = setTimeout(() => {
       loadResults();
-    }, 250);
+    }, 300);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, search, statusFilter, hasTransaction, hasDeposit, hasWithdraw]);
+  }, [loadResults]);
 
+  // socket realtime chỉ đăng ký 1 lần theo filter hiện tại
   useEffect(() => {
+    function refresh() {
+      loadResults();
+    }
+
+    function onConnect() {
+      console.log('✅ RunDetail socket connected');
+      refresh();
+    }
+
     function onResult(payload) {
       if (String(payload.runId) !== String(runId)) return;
 
+      console.log('🔥 RunDetail got result', payload.item?.username);
+
       setStats((prev) => {
-        if (!prev) return prev;
+        const base = prev || {
+          successCount: 0,
+          failedCount: 0,
+          highBalanceCount: 0
+        };
 
         return {
-          ...prev,
+          ...base,
           successCount:
-            (prev.successCount || 0) +
+            (base.successCount || 0) +
             (payload.item.status === 'SUCCESS' ? 1 : 0),
           failedCount:
-            (prev.failedCount || 0) +
+            (base.failedCount || 0) +
             (payload.item.status === 'FAILED' ? 1 : 0),
           highBalanceCount:
-            (prev.highBalanceCount || 0) +
+            (base.highBalanceCount || 0) +
             (Number(payload.item.balance || 0) > 100000 ? 1 : 0)
         };
       });
 
-      loadResults();
+      if (itemMatchesFilters(payload.item)) {
+        setResults((prev) => {
+          const existed = prev.some(
+            (x) => String(x._id) === String(payload.item._id)
+          );
+
+          if (existed) return prev;
+
+          return [payload.item, ...prev].slice(0, 500);
+        });
+      }
     }
 
     function onSummary(payload) {
@@ -113,18 +159,21 @@ export default function RunDetailPage() {
         highBalanceCount: payload.summary?.highBalanceCount || 0
       });
 
-      loadResults();
+      refresh();
     }
 
+    socket.on('connect', onConnect);
+    socket.io.on('reconnect', onConnect);
     socket.on('run:result', onResult);
     socket.on('run:summary', onSummary);
 
     return () => {
+      socket.off('connect', onConnect);
+      socket.io.off('reconnect', onConnect);
       socket.off('run:result', onResult);
       socket.off('run:summary', onSummary);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, search, statusFilter, hasTransaction, hasDeposit, hasWithdraw]);
+  }, [runId, loadResults, itemMatchesFilters]);
 
   const summary = useMemo(() => {
     return {

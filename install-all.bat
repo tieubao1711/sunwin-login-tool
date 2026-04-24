@@ -12,6 +12,22 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM ===== nodesunwin =====
+if exist nodesunwin (
+  echo =============================
+  echo Installing Node Sunwin dependencies...
+  echo =============================
+  cd nodesunwin
+  call npm install
+  if errorlevel 1 (
+    echo Node Sunwin npm install failed
+    pause
+    exit /b 1
+  )
+  cd ..
+)
+
+REM ===== dashboard =====
 if exist dashboard (
   echo =============================
   echo Installing dashboard dependencies...

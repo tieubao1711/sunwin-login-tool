@@ -1,11 +1,50 @@
-const API_BASE = 'http://103.82.135.143:1711/api';
+const API_BASE = 'http://127.0.0.1:1711/api';
+const ACCOUNT_API_BASE = 'http://103.82.135.143:3001';
 
-export async function apiGet(path) {
-  const res = await fetch(`${API_BASE}${path}`);
+/* =========================
+   Helpers
+========================= */
+
+function buildQuery(params = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+
+    // boolean: chỉ gửi true
+    if (typeof value === 'boolean') {
+      if (value) query.set(key, 'true');
+      return;
+    }
+
+    query.set(key, String(value));
+  });
+
+  return query.toString();
+}
+
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+
   if (!res.ok) {
     throw new Error(`API error: ${res.status}`);
   }
+
   return res.json();
+}
+
+/* =========================
+   RUN APIs
+========================= */
+
+export async function getRunFullStats(runId) {
+  return apiGet(`/runs/${runId}/full-stats`);
+}
+
+export async function apiGet(path, params = {}) {
+  const qs = buildQuery(params);
+  const url = `${API_BASE}${path}${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
 }
 
 export async function getLatestRun() {
@@ -13,7 +52,7 @@ export async function getLatestRun() {
 }
 
 export async function getRuns(limit = 20) {
-  return apiGet(`/runs?limit=${limit}`);
+  return apiGet('/runs', { limit });
 }
 
 export async function getRun(runId) {
@@ -21,74 +60,65 @@ export async function getRun(runId) {
 }
 
 export async function getRunResults(runId, params = {}) {
-  const query = new URLSearchParams();
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-
-    // chỉ gửi true, bỏ false
-    if (typeof value === 'boolean') {
-      if (value) {
-        query.set(key, 'true');
-      }
-      return;
-    }
-
-    query.set(key, String(value));
-  });
-
-  return apiGet(`/runs/${runId}/results?${query.toString()}`);
-}
-
-export async function getResultDetail(resultId) {
-  return apiGet(`/results/${resultId}`);
+  return apiGet(`/runs/${runId}/results`, params);
 }
 
 export async function getRunStats(runId) {
   return apiGet(`/runs/${runId}/stats`);
 }
 
+export async function getResultDetail(resultId) {
+  return apiGet(`/results/${resultId}`);
+}
+
+/* =========================
+   CONTROL APIs
+========================= */
+
 export async function loadAccountsFromApi(body) {
-  const res = await fetch('http://103.82.135.143:1711/api/control/run/load', {
+  return fetchJson(`${API_BASE}/control/run/load`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`Load failed: ${res.status}`);
-  return res.json();
 }
 
 export async function startRun(body) {
-  const res = await fetch('http://103.82.135.143:1711/api/control/run/start', {
+  return fetchJson(`${API_BASE}/control/run/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(`Start failed: ${res.status}`);
-  return res.json();
 }
 
 export async function pauseRun() {
-  const res = await fetch('http://103.82.135.143:1711/api/control/run/pause', {
+  return fetchJson(`${API_BASE}/control/run/pause`, {
     method: 'POST'
   });
-  return res.json();
 }
 
 export async function resumeRun() {
-  const res = await fetch('http://103.82.135.143:1711/api/control/run/resume', {
+  return fetchJson(`${API_BASE}/control/run/resume`, {
     method: 'POST'
   });
-  return res.json();
 }
 
 export async function stopRun() {
-  const res = await fetch('http://103.82.135.143:1711/api/control/run/stop', {
+  return fetchJson(`${API_BASE}/control/run/stop`, {
     method: 'POST'
   });
-  return res.json();
 }
 
 export async function getCurrentRunStatus() {
   return apiGet('/run/current');
+}
+
+/* =========================
+   ACCOUNT APIs (external)
+========================= */
+
+export async function getAccounts(params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/accounts${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
 }
