@@ -31,7 +31,7 @@ function convertTxtToJson(inputFile, outputFile) {
 }
 
 // ===== RUN =====
-const input = path.resolve(__dirname, './../../data/output.txt');
-const output = path.resolve(__dirname, './../../data/output.json');
+const input = path.resolve(__dirname, './../../data/sun7k6.txt');
+const output = path.resolve(__dirname, './../../data/sun7k6.json');
 
 convertTxtToJson(input, output);

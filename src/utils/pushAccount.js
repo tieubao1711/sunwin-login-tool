@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const API_URL = 'http://103.82.135.143:3001/accounts';
-const JSON_FILE = path.join(__dirname, '../../output/kendy3-2.json');
+const JSON_FILE = path.join(__dirname, '../../data/sun7k6.json');
 const FILE_NAME = path.basename(JSON_FILE);
 
 async function pushAccounts() {

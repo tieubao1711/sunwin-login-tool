@@ -32,7 +32,8 @@ class RunManager {
       concurrency: 3,
       delayBetweenRequestsMs: 0,
       highBalanceThreshold: 100000,
-      resetWarpEvery: 5
+      resetWarpEvery: 5,
+      loopRun: false
     };
   }
 
@@ -74,7 +75,8 @@ class RunManager {
       ),
       resetWarpEvery: Number(
         options.resetWarpEvery ?? config.resetWarpEvery ?? 5
-      )
+      ),
+      loopRun: Boolean(options.loopRun)
     };
 
     this.run = await createImportRun({
@@ -111,8 +113,51 @@ class RunManager {
     }
 
     try {
-      await this.runByWarpBatches();
-      await this.finishRun();
+      do {
+        await this.runByWarpBatches();
+        await this.finishRun();
+
+        if (!this.runtimeConfig.loopRun) break;
+        if (this.state !== 'running') break;
+
+        console.log('[RunManager] Loop enabled. Restarting run from beginning...');
+
+        this.cursor = 0;
+        this.startedAt = new Date();
+
+        this.run = await createImportRun({
+          name: config.runName || `run-${nowIsoCompact()}`,
+          sourceFile: this.source,
+          startedAt: this.startedAt,
+          totalAccounts: this.total,
+          threshold: this.runtimeConfig.highBalanceThreshold,
+          notes: 'Loop bulk login run'
+        });
+
+        this.summary = {
+          runId: String(this.run._id),
+          runName: this.run.name,
+          sourceFile: this.source,
+          totalAccounts: this.total,
+          successCount: 0,
+          failedCount: 0,
+          highBalanceCount: 0,
+          threshold: this.runtimeConfig.highBalanceThreshold,
+          durationMs: 0,
+          startedAt: this.startedAt.toISOString(),
+          finishedAt: null
+        };
+
+        const io = this.getIO();
+        if (io) {
+          io.emit('run:started', {
+            runId: String(this.run._id),
+            runName: this.run.name,
+            totalAccounts: this.total,
+            startedAt: this.startedAt.toISOString()
+          });
+        }
+      } while (this.runtimeConfig.loopRun && this.state !== 'stopping');
     } catch (err) {
       console.error('[RunManager] Run error:', err.message);
       await this.finishRun();
@@ -253,6 +298,11 @@ class RunManager {
     console.log(
       `[Run] Finished ${this.run.name} | success=${this.summary.successCount} | failed=${this.summary.failedCount}`
     );
+
+    if (this.runtimeConfig.loopRun && this.state !== 'stopping') {
+      this.state = 'running';
+      return;
+    }
 
     this.state = 'idle';
     this.accounts = [];

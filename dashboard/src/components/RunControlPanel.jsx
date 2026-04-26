@@ -28,6 +28,7 @@ export default function RunControlPanel({ onLoaded }) {
   const [loadedTotal, setLoadedTotal] = useState(0);
   const [currentRunId, setCurrentRunId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loopRun, setLoopRun] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('runControlConfig');
@@ -44,6 +45,7 @@ export default function RunControlPanel({ onLoaded }) {
       setHighBalanceThreshold(Number(parsed.highBalanceThreshold || 100000));
       setResetWarpEvery(Number(parsed.resetWarpEvery ?? 5));
       setCurrentRunId(parsed.currentRunId || '');
+      setLoopRun(Boolean(parsed.loopRun || false));
     } catch (err) {
       console.error('Load local config failed:', err.message);
     }
@@ -60,7 +62,8 @@ export default function RunControlPanel({ onLoaded }) {
         delayBetweenRequestsMs,
         highBalanceThreshold,
         resetWarpEvery,
-        currentRunId
+        currentRunId,
+        loopRun
       })
     );
   }, [
@@ -71,7 +74,8 @@ export default function RunControlPanel({ onLoaded }) {
     delayBetweenRequestsMs,
     highBalanceThreshold,
     resetWarpEvery,
-    currentRunId
+    currentRunId,
+    loopRun
   ]);
 
   function cleanFileNameInput(value) {
@@ -141,9 +145,9 @@ export default function RunControlPanel({ onLoaded }) {
         concurrency,
         delayBetweenRequestsMs,
         highBalanceThreshold,
-        resetWarpEvery
+        resetWarpEvery,
+        loopRun 
       });
-console.log('START RUN RESPONSE:', res);
 
       if (res.runId) {
         setCurrentRunId(res.runId);
@@ -263,6 +267,22 @@ console.log('START RUN RESPONSE:', res);
             onChange={(e) => setHighBalanceThreshold(Number(e.target.value))}
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-500"
           />
+        </div>
+        <div>
+          <div className="mb-1 text-xs text-slate-400">Loop Run</div>
+
+          <label className="flex h-[42px] items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-200">
+            <input
+              type="checkbox"
+              checked={loopRun}
+              onChange={(e) => setLoopRun(e.target.checked)}
+            />
+            Chạy lặp lại sau khi hoàn tất
+          </label>
+
+          <div className="mt-1 text-[11px] text-slate-500">
+            Sau khi chạy xong sẽ gửi summary và chạy lại từ đầu.
+          </div>
         </div>
       </div>
 

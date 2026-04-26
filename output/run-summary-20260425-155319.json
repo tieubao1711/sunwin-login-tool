@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "runId": "69ec7d4026ae9d76c1209040",
+    "runName": "run-20260425-153720",
+    "sourceFile": "kendy3-3.json | range=1501-3128",
+    "totalAccounts": 1628,
+    "successCount": 127,
+    "failedCount": 41,
+    "highBalanceCount": 0,
+    "threshold": 10000,
+    "durationMs": 959133,
+    "startedAt": "2026-04-25T08:37:20.127Z",
+    "finishedAt": "2026-04-25T08:53:19.260Z"
+  }
+}

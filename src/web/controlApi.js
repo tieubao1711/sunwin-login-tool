@@ -80,7 +80,8 @@ router.post('/run/start', async (req, res) => {
       concurrency = 3,
       delayBetweenRequestsMs = 0,
       highBalanceThreshold = 100000,
-      resetWarpEvery = 5
+      resetWarpEvery = 5,
+      loopRun = false
     } = req.body;
 
     const cleanFileName = cleanFileNameInput(fileName);
@@ -113,7 +114,8 @@ router.post('/run/start', async (req, res) => {
           concurrency,
           delayBetweenRequestsMs,
           highBalanceThreshold,
-          resetWarpEvery
+          resetWarpEvery,
+          loopRun
         }
       })
       .catch((err) => {
