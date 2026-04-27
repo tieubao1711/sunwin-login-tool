@@ -8,6 +8,7 @@ import RunDetailPage from './pages/RunDetailPage';
 import RunStatsPage from './pages/RunStatsPage';
 import AccountsPage from './pages/AccountsPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import CentralMonitorPage from './pages/CentralMonitorPage';
 
 export default function App() {
   return (
@@ -58,6 +59,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="/central-monitor" element={<CentralMonitorPage />} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

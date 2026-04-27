@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "runId": "69ef53b4e8bf6b2be825bab8",
+    "runName": "run-20260427-191652",
+    "sourceFile": "sun7k6.json | range=1-5179",
+    "totalAccounts": 5179,
+    "successCount": 0,
+    "failedCount": 0,
+    "highBalanceCount": 0,
+    "threshold": 1000000,
+    "durationMs": 2614,
+    "startedAt": "2026-04-27T12:16:52.411Z",
+    "finishedAt": "2026-04-27T12:16:55.025Z"
+  }
+}

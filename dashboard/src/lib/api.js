@@ -134,3 +134,24 @@ export async function getAccountFlagged(params = {}) {
   const url = `${ACCOUNT_API_BASE}/account-flagged${qs ? `?${qs}` : ''}`;
   return fetchJson(url);
 }
+
+export async function getCentralRuns(params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/central-runs${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
+}
+
+export async function getCentralLoginResults(params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/central-login-results${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
+}
+
+export async function deleteCentralRun(runKey) {
+  return fetchJson(
+    `${ACCOUNT_API_BASE}/central-runs/${encodeURIComponent(runKey)}`,
+    {
+      method: 'DELETE'
+    }
+  );
+}

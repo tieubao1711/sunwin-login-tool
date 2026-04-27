@@ -2,7 +2,7 @@ const path = require('path');
 const config = require('../config');
 const { loginById } = require('./loginService');
 const { pushAccountChecked } = require('./accountCheckedService');
-const { syncFlaggedAccount, syncCentralRun } = require('./vpsSyncService');
+const { syncFlaggedAccount, syncCentralRun, syncCentralLoginResult  } = require('./vpsSyncService');
 
 const {
   notifyDataGroup,
