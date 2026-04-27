@@ -107,6 +107,8 @@ async function loginById({ username, password }) {
       lastWithdrawBankName: firstWithdrawBank.accountName || '',
       lastWithdrawBankAccount: firstWithdrawBank.accountNumber || '',
       lastWithdrawNote: firstWithdraw.notes || '',
+      deposits: depositItems,
+      withdraws: withdrawItems,
 
       rawResponse: payload
     };

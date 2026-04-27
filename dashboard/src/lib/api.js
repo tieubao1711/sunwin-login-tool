@@ -122,3 +122,15 @@ export async function getAccounts(params = {}) {
   const url = `${ACCOUNT_API_BASE}/accounts${qs ? `?${qs}` : ''}`;
   return fetchJson(url);
 }
+
+export async function getAccountChecked(params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/account-checked${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
+}
+
+export async function getAccountFlagged(params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/account-flagged${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
+}

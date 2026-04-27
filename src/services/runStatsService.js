@@ -27,6 +27,32 @@ function normalizeEpochMs(value) {
   return String(Math.trunc(n)).length <= 10 ? n * 1000 : n;
 }
 
+function getDayKey(value) {
+  const ms = normalizeEpochMs(value);
+  if (!ms) return '';
+
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return '';
+
+  return d.toISOString().slice(0, 10);
+}
+
+function ensureDay(map, date) {
+  if (!date) return null;
+
+  if (!map[date]) {
+    map[date] = {
+      date,
+      depositCount: 0,
+      withdrawCount: 0,
+      totalDeposit: 0,
+      totalWithdraw: 0
+    };
+  }
+
+  return map[date];
+}
+
 function sortByNewest(items = []) {
   return [...items].sort((a, b) => {
     const ta = normalizeEpochMs(a.responseTime || a.requestTime || a.createdTime || 0);
@@ -35,12 +61,18 @@ function sortByNewest(items = []) {
   });
 }
 
-function summarizePayment(rawResponse, recentLimit = 0) {
+function extractPaymentItems(rawResponse) {
   const depositItems = get(rawResponse, 'data.slipHistory.deposit.data.items', []);
   const withdrawItems = get(rawResponse, 'data.slipHistory.withdraw.data.items', []);
 
-  const deposits = sortByNewest(Array.isArray(depositItems) ? depositItems : []);
-  const withdraws = sortByNewest(Array.isArray(withdrawItems) ? withdrawItems : []);
+  return {
+    deposits: sortByNewest(Array.isArray(depositItems) ? depositItems : []),
+    withdraws: sortByNewest(Array.isArray(withdrawItems) ? withdrawItems : [])
+  };
+}
+
+function summarizePayment(rawResponse, recentLimit = 0) {
+  const { deposits, withdraws } = extractPaymentItems(rawResponse);
 
   const pickedDeposits = recentLimit > 0 ? deposits.slice(0, recentLimit) : deposits;
   const pickedWithdraws = recentLimit > 0 ? withdraws.slice(0, recentLimit) : withdraws;
@@ -51,6 +83,35 @@ function summarizePayment(rawResponse, recentLimit = 0) {
     totalDeposit: pickedDeposits.reduce((sum, item) => sum + toNumber(item.amount), 0),
     totalWithdraw: pickedWithdraws.reduce((sum, item) => sum + toNumber(item.amount), 0)
   };
+}
+
+function applyPaymentByDate(stat, rawResponse) {
+  const { deposits, withdraws } = extractPaymentItems(rawResponse);
+
+  for (const item of deposits) {
+    const date = getDayKey(item.responseTime || item.requestTime || item.createdTime);
+    const row = ensureDay(stat.paymentByDateMap, date);
+    if (!row) continue;
+
+    row.depositCount += 1;
+    row.totalDeposit += toNumber(item.amount);
+  }
+
+  for (const item of withdraws) {
+    const date = getDayKey(item.responseTime || item.requestTime || item.createdTime);
+    const row = ensureDay(stat.paymentByDateMap, date);
+    if (!row) continue;
+
+    row.withdrawCount += 1;
+    row.totalWithdraw += toNumber(item.amount);
+  }
+}
+
+function finalizePaymentByDate(stat) {
+  stat.paymentByDate = Object.values(stat.paymentByDateMap || {})
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  delete stat.paymentByDateMap;
 }
 
 function extractBetRange(rawResponse) {
@@ -68,15 +129,9 @@ function extractBetRange(rawResponse) {
 }
 
 function extractPaymentRange(rawResponse) {
-  const depositItems = get(rawResponse, 'data.slipHistory.deposit.data.items', []);
-  const withdrawItems = get(rawResponse, 'data.slipHistory.withdraw.data.items', []);
+  const { deposits, withdraws } = extractPaymentItems(rawResponse);
 
-  const all = [
-    ...(Array.isArray(depositItems) ? depositItems : []),
-    ...(Array.isArray(withdrawItems) ? withdrawItems : [])
-  ];
-
-  const timestamps = all
+  const timestamps = [...deposits, ...withdraws]
     .map((x) => normalizeEpochMs(x.responseTime || x.requestTime))
     .filter((x) => x > 0);
 
@@ -117,6 +172,8 @@ function createEmptyStats() {
 
     totalDeposit: 0,
     totalWithdraw: 0,
+
+    paymentByDateMap: {},
 
     betRange: { min: 0, max: 0 },
     paymentRange: { min: 0, max: 0 }
@@ -179,6 +236,8 @@ function applyResultToStats(stat, item) {
   stat.totalDeposit += payment.totalDeposit;
   stat.totalWithdraw += payment.totalWithdraw;
 
+  applyPaymentByDate(stat, item.rawResponse);
+
   mergeRange(stat.betRange, betRange);
   mergeRange(stat.paymentRange, paymentRange);
 }
@@ -216,11 +275,17 @@ async function buildRunFullStats(runId) {
     applyResultToStats(byFileMap[fileName], item);
   }
 
+  finalizePaymentByDate(overall);
+
   const byFile = Object.entries(byFileMap)
-    .map(([fileName, stats]) => ({
-      fileName,
-      ...stats
-    }))
+    .map(([fileName, stats]) => {
+      finalizePaymentByDate(stats);
+
+      return {
+        fileName,
+        ...stats
+      };
+    })
     .sort((a, b) => b.total - a.total);
 
   return {

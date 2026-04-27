@@ -14,6 +14,8 @@ function toBoolean(value, fallback = false) {
 }
 
 module.exports = {
+  toolName: process.env.TOOL_NAME || "bulk-tool-01",
+  machineId: process.env.MACHINE_ID || "pc-01",
   mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sunwin_login_tool',
   accountApiUrl: process.env.ACCOUNT_API_URL || 'http://103.82.135.143:3001',
   inputFile: path.resolve(process.cwd(), process.env.INPUT_FILE || './data/2.txt'),

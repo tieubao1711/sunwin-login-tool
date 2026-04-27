@@ -47,6 +47,81 @@ function StatsGrid({ stats }) {
   );
 }
 
+function PaymentByDateTable({ items = [], loading }) {
+  return (
+    <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+      <div className="border-b border-slate-800 px-4 py-3">
+        <div className="font-semibold text-slate-100">
+          Tổng nạp / rút theo ngày
+        </div>
+        <div className="text-xs text-slate-500">
+          {items.length.toLocaleString('vi-VN')} ngày
+        </div>
+      </div>
+
+      <div className="max-h-[360px] overflow-auto">
+        <table className="min-w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-slate-950 text-slate-400">
+            <tr>
+              <th className="px-4 py-3 text-left">Ngày</th>
+              <th className="px-4 py-3 text-right">SL nạp</th>
+              <th className="px-4 py-3 text-right">Tổng nạp</th>
+              <th className="px-4 py-3 text-right">SL rút</th>
+              <th className="px-4 py-3 text-right">Tổng rút</th>
+              <th className="px-4 py-3 text-right">Net</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {items.map((item) => {
+              const net =
+                Number(item.totalDeposit || 0) -
+                Number(item.totalWithdraw || 0);
+
+              return (
+                <tr
+                  key={item.date}
+                  className="border-t border-slate-800 text-slate-200 hover:bg-slate-800/40"
+                >
+                  <td className="px-4 py-3 font-medium">{item.date}</td>
+                  <td className="px-4 py-3 text-right">
+                    {fmtNumber(item.depositCount)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-emerald-400">
+                    {fmtNumber(item.totalDeposit)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {fmtNumber(item.withdrawCount)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-rose-400">
+                    {fmtNumber(item.totalWithdraw)}
+                  </td>
+                  <td
+                    className={[
+                      'px-4 py-3 text-right',
+                      net >= 0 ? 'text-sky-400' : 'text-orange-400'
+                    ].join(' ')}
+                  >
+                    {fmtNumber(net)}
+                  </td>
+                </tr>
+              );
+            })}
+
+            {!loading && items.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  Không có dữ liệu nạp/rút theo ngày
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function RunStatsPage() {
   const { runId } = useParams();
 
@@ -73,6 +148,7 @@ export default function RunStatsPage() {
   const run = data?.run;
   const overall = data?.overall || {};
   const byFile = data?.byFile || [];
+  const paymentByDate = overall.paymentByDate || [];
 
   const durationText = useMemo(() => {
     const ms = Number(run?.durationMs || 0);
@@ -184,6 +260,11 @@ export default function RunStatsPage() {
             </div>
           </div>
         </div>
+
+        <PaymentByDateTable
+          items={paymentByDate}
+          loading={loading}
+        />
 
         <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
           <div className="border-b border-slate-800 px-4 py-3">

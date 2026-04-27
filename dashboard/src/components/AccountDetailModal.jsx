@@ -42,9 +42,21 @@ export default function AccountDetailModal({ open, item, onClose }) {
   if (!open || !item) return null;
 
   const raw = item.rawResponse || {};
-  const transactions = raw?.data?.transactions?.data?.items || [];
-  const depositItems = raw?.data?.slipHistory?.deposit?.data?.items || [];
-  const withdrawItems = raw?.data?.slipHistory?.withdraw?.data?.items || [];
+
+  const transactions =
+    raw?.data?.transactions?.data?.items ||
+    item.transactions ||
+    [];
+
+  const depositItems =
+    item.deposits ||
+    raw?.data?.slipHistory?.deposit?.data?.items ||
+    [];
+
+  const withdrawItems =
+    item.withdraws ||
+    raw?.data?.slipHistory?.withdraw?.data?.items ||
+    [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
