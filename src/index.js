@@ -39,11 +39,11 @@
 //   console.log(`[Parse] Total accounts: ${accounts.length}`);
 //   console.log(`[Parse] Saved parsed file: ${parsedFile}`);
 
-//   console.log('[4/4] Running bulk login...');
-//   const result = await runBulkLogin(accounts, config.inputFile);
+// //   console.log('[4/4] Running bulk login...');
+// //   const result = await runBulkLogin(accounts, config.inputFile);
 
-//   console.log('--- DONE ---');
-//   console.log(JSON.stringify(result.summary, null, 2));
+// //   console.log('--- DONE ---');
+// //   console.log(JSON.stringify(result.summary, null, 2));
 // }
 
 // main()

@@ -12,7 +12,7 @@ function convertTxtToJson(inputFile, outputFile) {
   const result = [];
 
   for (const line of lines) {
-    const [username, password] = line.split('|');
+    const [username, password] = line.split(':');
 
     if (!username || !password) continue;
 
@@ -31,7 +31,7 @@ function convertTxtToJson(inputFile, outputFile) {
 }
 
 // ===== RUN =====
-const input = path.resolve(__dirname, './../../data/sun7k6.txt');
-const output = path.resolve(__dirname, './../../data/sun7k6.json');
+const input = path.resolve(__dirname, './../../data/sun.win (l;p).txt');
+const output = path.resolve(__dirname, './../../data/sunwincrawltest.json');
 
 convertTxtToJson(input, output);

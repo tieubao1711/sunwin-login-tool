@@ -2,9 +2,9 @@
 const fs = require('fs');
 const XLSX = require('xlsx');
 
-const inputFile = './data/hitnew.txt';
-const outputFile = './data/hitnew.xlsx';
-const defaultGate = 'hit';
+const inputFile = './data/sunall.txt';
+const outputFile = './data/sunall.xlsx';
+const defaultGate = 'sun';
 
 const text = fs.readFileSync(inputFile, 'utf8');
 

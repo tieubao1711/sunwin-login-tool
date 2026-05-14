@@ -19,7 +19,7 @@ module.exports = {
   mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sunwin_login_tool',
   accountApiUrl: process.env.ACCOUNT_API_URL || 'http://103.82.135.143:3001',
   inputFile: path.resolve(process.cwd(), process.env.INPUT_FILE || './data/2.txt'),
-  loginApiUrl: process.env.LOGIN_API_URL || 'http://103.82.135.143:3000/login/full-info',
+  loginApiUrl: process.env.LOGIN_API_URL || 'http://127.0.0.1:3000/login/full-info',
   delayBetweenRequestsMs: Number(process.env.DELAY_BETWEEN_REQUESTS_MS || 0),
   requestTimeoutMs: toNumber(process.env.REQUEST_TIMEOUT_MS, 20000),
   concurrency: toNumber(process.env.CONCURRENCY, 5),

@@ -96,7 +96,7 @@ function convertExcelToTxt(inputFile, outputFile) {
 }
 
 // ===== RUN =====
-const input = path.resolve(__dirname, './../../data/input.xlsx');
-const output = path.resolve(__dirname, './../../data/output.txt');
+const input = path.resolve(__dirname, './../../data/sun 3.xlsx');
+const output = path.resolve(__dirname, './../../data/sun 3.txt');
 
 convertExcelToTxt(input, output);

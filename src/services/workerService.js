@@ -2,7 +2,12 @@ const path = require('path');
 const config = require('../config');
 const { loginById } = require('./loginService');
 const { pushAccountChecked } = require('./accountCheckedService');
-const { syncFlaggedAccount, syncCentralRun, syncCentralLoginResult  } = require('./vpsSyncService');
+
+const {
+  syncFlaggedAccount,
+  syncCentralRun,
+  syncCentralLoginResult
+} = require('./vpsSyncService');
 
 const {
   notifyDataGroup,
@@ -46,9 +51,19 @@ function sleep(ms) {
 
 async function safeNotify(fn, label) {
   try {
-    await fn();
+    return await fn();
   } catch (err) {
     console.log(`[TELEGRAM ERROR] ${label} | ${err.message}`);
+    return null;
+  }
+}
+
+async function safeSync(fn, label) {
+  try {
+    return await fn();
+  } catch (err) {
+    console.log(`[SYNC ERROR] ${label} | ${err.message}`);
+    return null;
   }
 }
 
@@ -117,70 +132,61 @@ async function processSingleAccount(
     `DATA_GROUP ${account.username}`
   );
 
-  await pushAccountChecked({
-    accountId: account._id,
-    username: account.username,
-    password: account.password,
-    displayName: normalized.displayName,
-    safe: normalized.safe,
-    phone: normalized.phone,
-    balance: normalized.balance,
-    status,
-    message: normalized.message
-  });
+  await safeSync(
+    () => pushAccountChecked({
+      accountId: account._id,
+      username: account.username,
+      password: account.password,
+      displayName: normalized.displayName,
+      safe: normalized.safe,
+      phone: normalized.phone,
+      balance: normalized.balance,
+      status,
+      message: normalized.message
+    }),
+    `ACCOUNT_CHECKED ${account.username}`
+  );
 
-  await syncCentralLoginResult({
-    runKey: String(runId),
-    toolName: config.toolName || 'bulk-tool-local',
-    machineId: config.machineId || '',
+  await safeSync(
+    () => syncCentralLoginResult({
+      runKey: String(runId),
+      toolName: config.toolName || 'bulk-tool-local',
+      machineId: config.machineId || '',
 
-    accountId: account._id,
-    username: account.username,
-    password: account.password,
+      accountId: account._id,
+      username: account.username,
+      password: account.password,
 
-    displayName: normalized.displayName,
-    phone: normalized.phone,
+      displayName: normalized.displayName,
+      phone: normalized.phone,
 
-    status,
-    message: normalized.message,
-    balance: normalized.balance,
-    safe: normalized.safe,
+      status,
+      message: normalized.message,
+      balance: normalized.balance,
+      safe: normalized.safe,
 
-    deposits: normalized.deposits || [],
-    withdraws: normalized.withdraws || [],
-    rawResponse: normalized.rawResponse,
+      deposits: normalized.deposits || [],
+      withdraws: normalized.withdraws || [],
+      rawResponse: normalized.rawResponse,
 
-    durationMs
-  });
+      durationMs
+    }),
+    `CENTRAL_RESULT ${account.username}`
+  );
 
-  /**
-   * Sync account chú ý lên API VPS
-   * Điều kiện: login success + có lịch sử nạp hoặc rút
-   *
-   * Lưu ý:
-   * loginById cần return thêm:
-   * - deposits: depositItems
-   * - withdraws: withdrawItems
-   */
-  if (
-    status === 'SUCCESS' &&
-    (
-      Number(normalized.depositCount || 0) > 0 ||
-      Number(normalized.withdrawCount || 0) > 0
-    )
-  ) {
-    try {
-      console.log('[FLAGGED DEBUG]', {
-        username: account.username,
-        hasRawResponse: !!normalized.rawResponse,
-        rawKeys: normalized.rawResponse ? Object.keys(normalized.rawResponse) : [],
-        depositCount: normalized.depositCount,
-        withdrawCount: normalized.withdrawCount,
-        depositsLen: normalized.deposits?.length || 0,
-        withdrawsLen: normalized.withdraws?.length || 0
-      });
+  const hasDeposit =
+    Number(normalized.depositCount || 0) > 0 ||
+    Number(normalized.lastDepositAmount || 0) > 0 ||
+    (Array.isArray(normalized.deposits) && normalized.deposits.length > 0);
 
-      await syncFlaggedAccount({
+  const hasWithdraw =
+    Number(normalized.withdrawCount || 0) > 0 ||
+    Number(normalized.lastWithdrawAmount || 0) > 0 ||
+    (Array.isArray(normalized.withdraws) && normalized.withdraws.length > 0);
+
+  if (status === 'SUCCESS' && (hasDeposit || hasWithdraw)) {
+    await safeSync(
+      () => syncFlaggedAccount({
         accountId: account._id,
         username: account.username,
         password: account.password,
@@ -206,17 +212,13 @@ async function processSingleAccount(
         lastWithdrawBankName: normalized.lastWithdrawBankName || '',
         lastWithdrawBankAccount: normalized.lastWithdrawBankAccount || '',
         lastWithdrawNote: normalized.lastWithdrawNote || '',
+
         rawResponse: normalized.rawResponse,
 
-        source: config.runName || 'bulk-tool-local'
-      });
-
-      console.log(
-        `[FLAGGED SYNC] ${account.username} | deposit=${normalized.depositCount || 0} | withdraw=${normalized.withdrawCount || 0}`
-      );
-    } catch (err) {
-      console.log(`[FLAGGED ERROR] ${account.username} | ${err.message}`);
-    }
+        source: config.runName || config.toolName || 'bulk-tool-local'
+      }),
+      `FLAGGED ${account.username}`
+    );
   }
 
   const io = getSocket();
@@ -276,15 +278,18 @@ async function runBulkLogin(accounts, source) {
     notes: 'Bulk login run'
   });
 
-  await syncCentralRun({
-    runKey: String(run._id),
-    toolName: config.toolName || 'bulk-tool-local',
-    machineId: config.machineId || '',
-    sourceFile: source,
-    total: accounts.length,
-    status: 'RUNNING',
-    startedAt
-  });
+  await safeSync(
+    () => syncCentralRun({
+      runKey: String(run._id),
+      toolName: config.toolName || 'bulk-tool-local',
+      machineId: config.machineId || '',
+      sourceFile: source,
+      total: accounts.length,
+      status: 'RUNNING',
+      startedAt
+    }),
+    'CENTRAL_RUN_START'
+  );
 
   const io = getSocket();
 
@@ -347,15 +352,18 @@ async function runBulkLogin(accounts, source) {
     summary
   });
 
-  await syncCentralRun({
-    runKey: String(run._id),
-    toolName: config.toolName || 'bulk-tool-local',
-    machineId: config.machineId || '',
-    sourceFile: source,
-    total: accounts.length,
-    status: 'DONE',
-    finishedAt
-  });
+  await safeSync(
+    () => syncCentralRun({
+      runKey: String(run._id),
+      toolName: config.toolName || 'bulk-tool-local',
+      machineId: config.machineId || '',
+      sourceFile: source,
+      total: accounts.length,
+      status: 'DONE',
+      finishedAt
+    }),
+    'CENTRAL_RUN_DONE'
+  );
 
   ensureDir(OUTPUT_DIR);
 
@@ -372,10 +380,10 @@ async function runBulkLogin(accounts, source) {
   }
 
   console.log('[Run] Flushing Telegram...');
-  await flushAllBatches();
+  await safeNotify(() => flushAllBatches(), 'FLUSH_ALL_BATCHES');
 
   console.log('[Run] Waiting queue...');
-  await waitForDataQueueDrain();
+  await safeNotify(() => waitForDataQueueDrain(), 'WAIT_DATA_QUEUE');
 
   await safeNotify(() => notifyRunSummary(summary), 'RUN_SUMMARY');
 
@@ -385,7 +393,7 @@ async function runBulkLogin(accounts, source) {
 
   return { summary, processed };
 }
- 
+
 module.exports = {
   runBulkLogin,
   processSingleAccount

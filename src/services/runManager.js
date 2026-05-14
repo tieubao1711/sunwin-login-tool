@@ -4,7 +4,7 @@ const { nowIsoCompact } = require('../utils/time');
 const { ensureDir, writeJson } = require('../utils/file');
 const { createImportRun, finishImportRun } = require('../repositories/importRunRepository');
 const { processSingleAccount } = require('./workerService');
-const { resetWarp } = require('./../utils/warpManager');
+const { resetWarp, waitForWarpReady } = require('./../utils/warpManager');
 const {
   notifyRunSummaryFile,
   flushAllBatches,
@@ -190,6 +190,7 @@ class RunManager {
       );
 
       await resetWarp();
+      await waitForWarpReady();
 
       await this.runBatch(batch, i);
     }
@@ -211,16 +212,27 @@ class RunManager {
         const globalIndex = baseIndex + localIndex;
         const account = batch[localIndex];
 
-        const result = await processSingleAccount(
-          account,
-          this.run._id,
-          globalIndex,
-          this.total,
-          {
-            delayBetweenRequestsMs: this.runtimeConfig.delayBetweenRequestsMs,
-            highBalanceThreshold: this.runtimeConfig.highBalanceThreshold
-          }
-        );
+        let result;
+
+        try {
+          result = await processSingleAccount(
+            account,
+            this.run._id,
+            globalIndex,
+            this.total,
+            {
+              delayBetweenRequestsMs: this.runtimeConfig.delayBetweenRequestsMs,
+              highBalanceThreshold: this.runtimeConfig.highBalanceThreshold
+            }
+          );
+        } catch (err) {
+          console.log(`[WORKER ERROR] ${account.username} | ${err.message}`);
+
+          result = {
+            status: 'FAILED',
+            highBalance: false
+          };
+        }
 
         this.cursor = Math.max(this.cursor, globalIndex + 1);
 
