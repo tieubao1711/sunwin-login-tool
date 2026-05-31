@@ -1,7 +1,8 @@
 const ImportRun = require('../models/ImportRun');
 const LoginResult = require('../models/LoginResult');
+const config = require('../config');
 
-const ACCOUNT_API_URL = 'http://103.82.135.143:3001';
+const ACCOUNT_API_URL = config.accountApiUrl || 'http://127.0.0.1:3001';
 
 function toNumber(v) {
   const n = Number(v || 0);

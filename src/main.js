@@ -12,7 +12,7 @@ async function openBrowser(url) {
 async function main() {
   const { io } = startWebServer(1711);
   global.io = io;
-  startAuthTelegramBot();
+  // startAuthTelegramBot();
 
   ensureDir(path.resolve(process.cwd(), 'output'));
 

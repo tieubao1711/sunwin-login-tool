@@ -99,6 +99,20 @@ export default function AccountDetailModal({ open, item, onClose }) {
             <div className="text-sm text-slate-400">Safe</div>
             <div className="mt-2 font-medium">{fmtMoney(item.safe)}</div>
           </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div className="text-sm text-slate-400">Proxy</div>
+            <div className="mt-2 break-all text-sm font-medium">
+              {item.proxyId || raw.proxyId || '-'}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div className="text-sm text-slate-400">Upstream</div>
+            <div className="mt-2 text-sm font-medium">
+              {item.upstreamStatus || raw.upstreamStatus || '-'} | {item.upstreamStage || raw.upstreamStage || '-'}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 px-6 pb-6 lg:grid-cols-3">

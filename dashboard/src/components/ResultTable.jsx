@@ -18,6 +18,7 @@ export default function ResultTable({ items = [], onViewDetail }) {
               <th className="px-4 py-3 text-left">Fullname</th>
               <th className="px-4 py-3 text-left">Phone</th>
               <th className="px-4 py-3 text-left">Status</th>
+              <th className="px-4 py-3 text-left">Proxy</th>
               <th className="px-4 py-3 text-left">Balance</th>
               <th className="px-4 py-3 text-left">Safe</th>
               <th className="px-4 py-3 text-left">Nạp gần nhất</th>
@@ -67,6 +68,10 @@ export default function ResultTable({ items = [], onViewDetail }) {
                   {/* STATUS */}
                   <td className="px-4 py-3">
                     <StatusBadge value={item.status} />
+                  </td>
+
+                  <td className="px-4 py-3 text-xs text-slate-400">
+                    {item.proxyId || '-'}
                   </td>
 
                   {/* BALANCE */}

@@ -9,6 +9,8 @@ import RunStatsPage from './pages/RunStatsPage';
 import AccountsPage from './pages/AccountsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import CentralMonitorPage from './pages/CentralMonitorPage';
+import ProxyPoolsPage from './pages/ProxyPoolsPage';
+import ProxyTestPage from './pages/ProxyTestPage';
 
 export default function App() {
   return (
@@ -61,6 +63,24 @@ export default function App() {
       />
 
       <Route path="/central-monitor" element={<CentralMonitorPage />} />
+
+      <Route
+        path="/proxy-pools"
+        element={
+          <ProtectedRoute>
+            <ProxyPoolsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/proxy-test"
+        element={
+          <ProtectedRoute>
+            <ProxyTestPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

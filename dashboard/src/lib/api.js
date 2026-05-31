@@ -1,5 +1,8 @@
 const API_BASE = 'http://127.0.0.1:1711/api';
-const ACCOUNT_API_BASE = 'http://103.82.135.143:3001';
+const ACCOUNT_API_BASE =
+  import.meta.env.ACCOUNT_API_URL ||
+  import.meta.env.VITE_ACCOUNT_API_URL ||
+  'http://127.0.0.1:3001';
 
 /* =========================
    Helpers
@@ -113,6 +116,16 @@ export async function getCurrentRunStatus() {
   return apiGet('/run/current');
 }
 
+export async function testAccountWithProxy(body) {
+  const res = await fetch(`${API_BASE}/control/proxy/test-account`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  return res.json();
+}
+
 /* =========================
    ACCOUNT APIs (external)
 ========================= */
@@ -150,6 +163,66 @@ export async function getCentralLoginResults(params = {}) {
 export async function deleteCentralRun(runKey) {
   return fetchJson(
     `${ACCOUNT_API_BASE}/central-runs/${encodeURIComponent(runKey)}`,
+    {
+      method: 'DELETE'
+    }
+  );
+}
+
+export async function getProxyPools() {
+  return fetchJson(`${ACCOUNT_API_BASE}/proxy-pools`);
+}
+
+export async function createProxyPool(body) {
+  return fetchJson(`${ACCOUNT_API_BASE}/proxy-pools`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+export async function updateProxyPool(poolId, body) {
+  return fetchJson(`${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+export async function deleteProxyPool(poolId) {
+  return fetchJson(`${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function getProxyPoolProxies(poolId, params = {}) {
+  const qs = buildQuery(params);
+  const url = `${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}/proxies${qs ? `?${qs}` : ''}`;
+  return fetchJson(url);
+}
+
+export async function importProxyPoolProxies(poolId, body) {
+  return fetchJson(`${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
+export async function updateProxyPoolProxy(poolId, proxyId, body) {
+  return fetchJson(
+    `${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}/proxies/${encodeURIComponent(proxyId)}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export async function deleteProxyPoolProxy(poolId, proxyId) {
+  return fetchJson(
+    `${ACCOUNT_API_BASE}/proxy-pools/${encodeURIComponent(poolId)}/proxies/${encodeURIComponent(proxyId)}`,
     {
       method: 'DELETE'
     }

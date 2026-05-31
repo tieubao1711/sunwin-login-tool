@@ -33,7 +33,8 @@ class RunManager {
       delayBetweenRequestsMs: 0,
       highBalanceThreshold: 100000,
       resetWarpEvery: 5,
-      loopRun: false
+      loopRun: false,
+      proxyPoolId: ''
     };
   }
 
@@ -76,7 +77,8 @@ class RunManager {
       resetWarpEvery: Number(
         options.resetWarpEvery ?? config.resetWarpEvery ?? 5
       ),
-      loopRun: Boolean(options.loopRun)
+      loopRun: Boolean(options.loopRun),
+      proxyPoolId: String(options.proxyPoolId || '')
     };
 
     this.run = await createImportRun({
@@ -222,7 +224,8 @@ class RunManager {
             this.total,
             {
               delayBetweenRequestsMs: this.runtimeConfig.delayBetweenRequestsMs,
-              highBalanceThreshold: this.runtimeConfig.highBalanceThreshold
+              highBalanceThreshold: this.runtimeConfig.highBalanceThreshold,
+              proxyPoolId: this.runtimeConfig.proxyPoolId
             }
           );
         } catch (err) {

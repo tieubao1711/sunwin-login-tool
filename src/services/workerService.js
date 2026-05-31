@@ -40,6 +40,7 @@ const {
 } = require('../mappers/telegramResultMapper');
 
 const OUTPUT_DIR = path.resolve(process.cwd(), 'output');
+const INFRA_RETRY_LIMIT = 3;
 
 function getSocket() {
   return global.io;
@@ -78,8 +79,48 @@ function resolveRuntimeOptions(runtimeOptions = {}) {
       runtimeOptions.highBalanceThreshold ??
         config.highBalanceThreshold ??
         100000
-    )
+    ),
+    proxyPoolId: String(runtimeOptions.proxyPoolId || '')
   };
+}
+
+function isRetryableProxyFailure(login) {
+  const status = Number(login?.upstreamStatus || login?.statusCode || 0);
+  const message = String(login?.message || '');
+
+  return (
+    login?.upstreamStage === 'loginHash' &&
+    (status === 403 || message.includes('No available proxy'))
+  );
+}
+
+async function loginWithProxyRetry(account, resolvedOptions, total, index) {
+  let lastLogin = null;
+
+  for (let attempt = 1; attempt <= INFRA_RETRY_LIMIT; attempt += 1) {
+    const rawLogin = await loginById({
+      username: account.username,
+      password: account.password,
+      proxyPoolId: resolvedOptions.proxyPoolId,
+      forceReloadProxy: attempt > 1
+    });
+
+    lastLogin = rawLogin;
+
+    if (!isRetryableProxyFailure(rawLogin)) {
+      return rawLogin;
+    }
+
+    console.log(
+      `[${index + 1}/${total}] RETRY ${account.username} | attempt=${attempt}/${INFRA_RETRY_LIMIT} | proxy=${rawLogin.proxyId || '-'} | ${rawLogin.message}`
+    );
+
+    if (attempt < INFRA_RETRY_LIMIT) {
+      await sleep(300);
+    }
+  }
+
+  return lastLogin;
 }
 
 async function processSingleAccount(
@@ -98,10 +139,12 @@ async function processSingleAccount(
   let normalized;
 
   try {
-    rawLogin = await loginById({
-      username: account.username,
-      password: account.password
-    });
+    rawLogin = await loginWithProxyRetry(
+      account,
+      resolvedOptions,
+      total,
+      index
+    );
 
     normalized = normalizeLoginResult(rawLogin, null);
   } catch (error) {
@@ -168,6 +211,10 @@ async function processSingleAccount(
       deposits: normalized.deposits || [],
       withdraws: normalized.withdraws || [],
       rawResponse: normalized.rawResponse,
+      proxyId: normalized.proxyId || '',
+      proxyUrl: normalized.proxyUrl || '',
+      upstreamStatus: normalized.upstreamStatus || 0,
+      upstreamStage: normalized.upstreamStage || '',
 
       durationMs
     }),
@@ -240,7 +287,11 @@ async function processSingleAccount(
         slipCount: normalized.slipCount || 0,
         depositCount: normalized.depositCount || 0,
         withdrawCount: normalized.withdrawCount || 0,
-        rawResponse: normalized.rawResponse || null
+        rawResponse: normalized.rawResponse || null,
+        proxyId: normalized.proxyId || '',
+        proxyUrl: normalized.proxyUrl || '',
+        upstreamStatus: normalized.upstreamStatus || 0,
+        upstreamStage: normalized.upstreamStage || ''
       }
     });
   }

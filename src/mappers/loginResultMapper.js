@@ -59,7 +59,11 @@ function normalizeLoginResult(login, error) {
       lastWithdrawNote: '',
 
       rawResponse: null,
-      errorStack: error.stack || ''
+      errorStack: error.stack || '',
+      proxyId: '',
+      proxyUrl: '',
+      upstreamStatus: 0,
+      upstreamStage: ''
     };
   }
 
@@ -122,7 +126,11 @@ function normalizeLoginResult(login, error) {
     lastWithdrawNote: login.lastWithdrawNote || '',
 
     rawResponse: login.rawResponse || null,
-    errorStack: login.errorStack || ''
+    errorStack: login.errorStack || '',
+    proxyId: login.proxyId || '',
+    proxyUrl: login.proxyUrl || '',
+    upstreamStatus: login.upstreamStatus || login.statusCode || 0,
+    upstreamStage: login.upstreamStage || ''
   };
 }
 
@@ -192,7 +200,11 @@ function buildLoginResultPayload(account, runId, status, login) {
     lastWithdrawNote: login.lastWithdrawNote,
 
     rawResponse: login.rawResponse,
-    errorStack: login.errorStack || ''
+    errorStack: login.errorStack || '',
+    proxyId: login.proxyId || '',
+    proxyUrl: login.proxyUrl || '',
+    upstreamStatus: login.upstreamStatus || 0,
+    upstreamStage: login.upstreamStage || ''
   };
 }
 

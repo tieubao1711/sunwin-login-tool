@@ -1,11 +1,13 @@
 import React from 'react';
-import { BarChart3, History, Activity, Users, Network } from 'lucide-react';
+import { BarChart3, History, Activity, Users, Network, Shield, Gauge } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const items = [
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { to: '/accounts', label: 'Accounts', icon: Users },
   { to: '/runs', label: 'Runs', icon: History },
+  { to: '/proxy-pools', label: 'Proxy Pools', icon: Shield },
+  { to: '/proxy-test', label: 'Proxy Test', icon: Gauge },
   { to: '/central-monitor', label: 'Central Monitor', icon: Network }
 ];
 

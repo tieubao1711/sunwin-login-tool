@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const runManager = require('../services/runManager');
+const config = require('../config');
 
-const ACCOUNT_API_BASE = 'http://103.82.135.143:3001';
+const ACCOUNT_API_BASE = config.accountApiUrl || 'http://127.0.0.1:3001';
 
 function cleanFileNameInput(fileName) {
   return String(fileName || '')
@@ -81,7 +82,8 @@ router.post('/run/start', async (req, res) => {
       delayBetweenRequestsMs = 0,
       highBalanceThreshold = 100000,
       resetWarpEvery = 5,
-      loopRun = false
+      loopRun = false,
+      proxyPoolId = ''
     } = req.body;
 
     const cleanFileName = cleanFileNameInput(fileName);
@@ -115,7 +117,8 @@ router.post('/run/start', async (req, res) => {
           delayBetweenRequestsMs,
           highBalanceThreshold,
           resetWarpEvery,
-          loopRun
+          loopRun,
+          proxyPoolId
         }
       })
       .catch((err) => {
@@ -129,7 +132,8 @@ router.post('/run/start', async (req, res) => {
       loadedTotal: allAccounts.length,
       startIndex: start,
       endIndex: end,
-      source: cleanFileName || 'all'
+      source: cleanFileName || 'all',
+      proxyPoolId
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -150,6 +154,67 @@ router.post('/run/stop', (req, res) => {
 
 router.get('/run/current', (req, res) => {
   res.json(runManager.getStatus());
+});
+
+router.post('/proxy/test-account', async (req, res) => {
+  try {
+    const {
+      username = '',
+      password = '',
+      proxyPoolId = '',
+      proxyId = '',
+      forceReloadProxy = false
+    } = req.body;
+
+    const cleanUsername = String(username || '').trim();
+    const cleanPassword = String(password || '').trim();
+
+    if (!cleanUsername || !cleanPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing username or password'
+      });
+    }
+
+    const startedAt = Date.now();
+    const upstreamRes = await fetch(config.loginApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        username: cleanUsername,
+        password: cleanPassword,
+        proxyPoolId,
+        proxyId,
+        forceReloadProxy
+      })
+    });
+
+    const data = await upstreamRes.json().catch(() => ({}));
+
+    return res.status(upstreamRes.ok ? 200 : upstreamRes.status).json({
+      success: upstreamRes.ok && data.success === true,
+      status: upstreamRes.status,
+      durationMs: Date.now() - startedAt,
+      proxyPoolId,
+      requestedProxyId: proxyId,
+      proxyId: data.proxyId || '',
+      proxyUrl: data.proxyUrl || '',
+      stages: data.stages || [],
+      upstreamStatus: data.upstreamStatus || upstreamRes.status,
+      upstreamStage: data.upstreamStage || '',
+      upstreamUrl: data.upstreamUrl || config.loginApiUrl,
+      message: data.message || '',
+      data
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 });
 
 module.exports = router;

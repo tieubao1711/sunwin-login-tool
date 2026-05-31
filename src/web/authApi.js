@@ -9,7 +9,7 @@ const { startAuthTelegramBot } = require('./../services/telegramService');
 const router = express.Router();
 
 router.post('/session', (req, res) => {
-  startAuthTelegramBot();
+  // startAuthTelegramBot();
   const session = createAuthSession();
 
   res.json({

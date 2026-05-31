@@ -81,6 +81,10 @@ async function syncCentralLoginResult(payload) {
     withdraws: Array.isArray(payload.withdraws) ? payload.withdraws : [],
 
     rawResponse: payload.rawResponse || null,
+    proxyId: payload.proxyId || '',
+    proxyUrl: payload.proxyUrl || '',
+    upstreamStatus: Number(payload.upstreamStatus || 0),
+    upstreamStage: payload.upstreamStage || '',
     durationMs: Number(payload.durationMs || 0)
   });
 }

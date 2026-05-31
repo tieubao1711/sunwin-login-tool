@@ -50,7 +50,11 @@ const loginResultSchema = new mongoose.Schema(
     lastSlipBankAccount: { type: String, default: '' },
 
     rawResponse: { type: Object, default: null },
-    errorStack: { type: String, default: '' }
+    errorStack: { type: String, default: '' },
+    proxyId: { type: String, default: '' },
+    proxyUrl: { type: String, default: '' },
+    upstreamStatus: { type: Number, default: 0 },
+    upstreamStage: { type: String, default: '' }
   },
   { timestamps: true }
 );

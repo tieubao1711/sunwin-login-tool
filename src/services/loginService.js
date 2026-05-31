@@ -10,9 +10,24 @@ const http = axios.create({
   }
 });
 
-async function loginById({ username, password }) {
+function appendDiagnostics(message, data = {}) {
+  const parts = [];
+
+  if (data.upstreamStatus) parts.push(`upstream=${data.upstreamStatus}`);
+  if (data.upstreamStage) parts.push(`stage=${data.upstreamStage}`);
+  if (data.proxyId) parts.push(`proxy=${data.proxyId}`);
+
+  return parts.length ? `${message} | ${parts.join(' | ')}` : message;
+}
+
+async function loginById({ username, password, proxyPoolId = '', forceReloadProxy = false }) {
   try {
-    const response = await http.post(config.loginApiUrl, { username, password });
+    const response = await http.post(config.loginApiUrl, {
+      username,
+      password,
+      proxyPoolId,
+      forceReloadProxy
+    });
     const payload = response.data || {};
     const data = payload.data || {};
 
@@ -113,16 +128,23 @@ async function loginById({ username, password }) {
       rawResponse: payload
     };
   } catch (error) {
+    const errorData = error.response?.data || {};
+    const baseMessage =
+      errorData.message ||
+      errorData.data?.message ||
+      error.message ||
+      'Request failed';
+
     return {
       ok: false,
-      statusCode: error.response?.status || 0,
+      statusCode: errorData.upstreamStatus || error.response?.status || 0,
       command: '',
       executeTime: 0,
-      message:
-        error.response?.data?.message ||
-        error.response?.data?.data?.message ||
-        error.message ||
-        'Request failed',
+      message: appendDiagnostics(baseMessage, errorData),
+      proxyId: errorData.proxyId || '',
+      proxyUrl: errorData.proxyUrl || '',
+      upstreamStatus: errorData.upstreamStatus || error.response?.status || 0,
+      upstreamStage: errorData.upstreamStage || '',
 
       balance: 0,
       chip: 0,
@@ -167,7 +189,7 @@ async function loginById({ username, password }) {
       lastWithdrawBankAccount: '',
       lastWithdrawNote: '',
 
-      rawResponse: error.response?.data || null,
+      rawResponse: errorData || null,
       errorStack: error.stack || ''
     };
   }

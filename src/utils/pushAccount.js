@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('../config');
 
-const API_URL = 'http://103.82.135.143:3001/accounts';
-const JSON_FILE = path.join(__dirname, '../../data/sunmoon.json');
-const FILE_NAME = path.basename(JSON_FILE);
+const API_URL = `${config.accountApiUrl || 'http://127.0.0.1:3001'}/accounts`;
+const JSON_FILE = path.join(__dirname, '../../data/combined-result-8-9-2026-06-01-by-account.json');
+const FILE_NAME = 'sunvinanew.json'; //path.basename(JSON_FILE);
 
 async function pushAccounts() {
   try {

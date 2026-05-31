@@ -11,6 +11,7 @@ import {
 
 import {
   loadAccountsFromApi,
+  getProxyPools,
   startRun,
   pauseRun,
   resumeRun,
@@ -29,6 +30,8 @@ export default function RunControlPanel({ onLoaded }) {
   const [currentRunId, setCurrentRunId] = useState('');
   const [loading, setLoading] = useState(false);
   const [loopRun, setLoopRun] = useState(false);
+  const [proxyPoolId, setProxyPoolId] = useState('');
+  const [proxyPools, setProxyPools] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('runControlConfig');
@@ -46,6 +49,7 @@ export default function RunControlPanel({ onLoaded }) {
       setResetWarpEvery(Number(parsed.resetWarpEvery ?? 5));
       setCurrentRunId(parsed.currentRunId || '');
       setLoopRun(Boolean(parsed.loopRun || false));
+      setProxyPoolId(parsed.proxyPoolId || '');
     } catch (err) {
       console.error('Load local config failed:', err.message);
     }
@@ -63,7 +67,8 @@ export default function RunControlPanel({ onLoaded }) {
         highBalanceThreshold,
         resetWarpEvery,
         currentRunId,
-        loopRun
+        loopRun,
+        proxyPoolId
       })
     );
   }, [
@@ -75,8 +80,15 @@ export default function RunControlPanel({ onLoaded }) {
     highBalanceThreshold,
     resetWarpEvery,
     currentRunId,
-    loopRun
+    loopRun,
+    proxyPoolId
   ]);
+
+  useEffect(() => {
+    getProxyPools()
+      .then((res) => setProxyPools(res.items || []))
+      .catch((err) => console.error('Load proxy pools failed:', err.message));
+  }, []);
 
   function cleanFileNameInput(value) {
     return String(value || '')
@@ -146,7 +158,8 @@ export default function RunControlPanel({ onLoaded }) {
         delayBetweenRequestsMs,
         highBalanceThreshold,
         resetWarpEvery,
-        loopRun 
+        loopRun,
+        proxyPoolId
       });
 
       if (res.runId) {
@@ -268,6 +281,26 @@ export default function RunControlPanel({ onLoaded }) {
             className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-500"
           />
         </div>
+
+        <div>
+          <div className="mb-1 text-xs text-slate-400">Proxy Pool</div>
+          <select
+            value={proxyPoolId}
+            onChange={(e) => setProxyPoolId(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-emerald-500"
+          >
+            <option value="">proxies.txt</option>
+            {proxyPools.map((pool) => (
+              <option key={pool._id} value={pool._id}>
+                {pool.name} ({pool.activeCount || 0}/{pool.total || 0})
+              </option>
+            ))}
+          </select>
+          <div className="mt-1 text-[11px] text-slate-500">
+            Neu khong chon thi dung file proxies.txt cua nodesunwin.
+          </div>
+        </div>
+
         <div>
           <div className="mb-1 text-xs text-slate-400">Loop Run</div>
 
